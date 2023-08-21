@@ -1,0 +1,70 @@
+import tensorflow as tf
+from keras.preprocessing.image import ImageDataGenerator
+
+# Preprocessing training dataset
+train_datagen = ImageDataGenerator(
+    rescale=1./255,
+    shear_range=0.2,
+    zoom_range=0.2,
+    horizontal_flip=True
+)
+train_set = train_datagen.flow_from_directory(
+    'dataset/training_set',
+    target_size=(64, 64),
+    batch_size=32,
+    class_mode='categorical',  # Change class_mode to 'categorical'
+    shuffle=True
+)
+
+# Preprocessing test dataset
+test_datagen = ImageDataGenerator(rescale=1./255)
+test_set = test_datagen.flow_from_directory(
+    'dataset/test_set',
+    target_size=(64, 64),
+    batch_size=32,
+    class_mode='categorical'  # Change class_mode to 'categorical'
+)
+
+# Building CNN
+cnn = tf.keras.models.Sequential()
+
+# Adding convolutional layer
+cnn.add(tf.keras.layers.Conv2D(filters=32, kernel_size=3, activation='relu', input_shape=[64, 64, 3]))
+
+# Adding Pooling Layer
+cnn.add(tf.keras.layers.MaxPool2D(pool_size=2, strides=2))
+
+# Adding second convolutional layer
+cnn.add(tf.keras.layers.Conv2D(filters=32, kernel_size=3, activation='relu'))
+
+# Adding second Pooling Layer
+cnn.add(tf.keras.layers.MaxPool2D(pool_size=2, strides=2))
+
+# Adding Flattening layer
+cnn.add(tf.keras.layers.Flatten())
+
+# Adding Fullyconnected layer
+cnn.add(tf.keras.layers.Dense(units=128, activation='relu'))
+
+# Adding output layer
+cnn.add(tf.keras.layers.Dense(units=10, activation='softmax'))  # Change units to 10 and activation to 'softmax'
+
+# Training CNN
+cnn.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])  # Change loss to 'categorical_crossentropy'
+cnn.fit(x=train_set, validation_data=test_set, epochs=25)
+
+# Making single Prediction
+import numpy as np
+from keras.preprocessing import image
+
+test_image = image.load_img('dataset/single_prediction/your_image.jpg', target_size=(64, 64))
+test_image = image.img_to_array(test_image)
+test_image = np.expand_dims(test_image, axis=0)
+result = cnn.predict(test_image)
+
+predicted_class = np.argmax(result, axis=1)  # Get the index of the predicted class
+# Map the index to the actual class label based on your dataset's class labels
+class_labels = train_set.class_indices
+predicted_label = [label for label, index in class_labels.items() if index == predicted_class][0]
+
+print(predicted_label)
